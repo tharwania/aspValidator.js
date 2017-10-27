@@ -1,4 +1,4 @@
-﻿/*
+/*
 *********** USAGE *********************
  var validation = {
             showErrorSummary: true, // Will show only error summary 
@@ -8,6 +8,12 @@
                 '#txtReportName': { 
                     name: 'Report Name', // Property name to be used in validation rules
                     required: true // will popup error when submit textbox left empty
+                    requiredErrorMessage: "this is required error message", // custom required message 
+                    regex: 'dsf4654sdfdd', // regex to verify
+                    regexErrorMessage: 'Add emails seperated by commo', //
+                    customValidation: function(){ //custom validation done here },
+                    customValidationMessage: "custom validation message here."
+
                 },
                 '#txtReportTitle': {
                     name: 'Report Title',
@@ -32,17 +38,13 @@ function validate(validation) {
     else {
         var rules = validation.rules;
         for (var selector in rules) {
-            if (rules.hasOwnProperty(selector)) {
-                if (rules[selector].hasOwnProperty('required') && rules[selector]['required'] == true) {
-                    var isRequiredPassed = validateRequired(selector);
-                    if (!isRequiredPassed) {
-                        showRequiredError(selector, rules[selector].name);
-                        validationResult[selector] = {};
-                        validationResult[selector].isValid = false;
-                        validationResult[selector].isRequiredPassed = isRequiredPassed;
-                    }
-                }
-            }
+                var property = rules[selector];
+               
+                validationResult[selector] = {};
+
+                checkRequiredValidation(property, validationResult[selector], selector);
+                checkRegexValidation(property, validationResult[selector], selector);
+                checkCustomValidation(property, validationResult[selector], selector);
         }
         var isFormValid = areAllFieldsValid(validationResult);
 
@@ -53,7 +55,40 @@ function validate(validation) {
         return isFormValid;
     }
 }
+function checkCustomValidation(property, result, selector){
+    if (property.hasOwnProperty('customValidation') && property['customValidation'] != '') {
+        var isCustomValidationPassed = validateCustomValidation(selector, property);
+        if (!isCustomValidationPassed) {
+           // showRequiredError(selector, property.name);
 
+            result.isValid = false;
+            result.isCustomValidationPassed = isCustomValidationPassed;
+        }
+    }
+}
+function checkRegexValidation(property, result, selector) {
+    if (property.hasOwnProperty('regex') && property['regex'] != '') {
+        var isRegexPassed = validateRegex(selector, property);
+        if (!isRegexPassed) {
+            showRequiredError(selector, property.name);
+
+            result.isValid = false;
+            result.isRegexPassed = isRegexPassed;
+        }
+    }
+}
+
+function checkRequiredValidation(property, result, selector) {
+    if (property.hasOwnProperty('required') && property['required'] == true) {
+        var isRequiredPassed = validateRequired(selector);
+        if (!isRequiredPassed) {
+            showRequiredError(selector, property.name);
+
+            result.isValid = false;
+            result.isRequiredPassed = isRequiredPassed;
+        }
+    }
+}
 function showErrors(validationResult, rules, validation) {
     var errorSummary = [];
     for (var field in validationResult) {
@@ -97,8 +132,29 @@ function showRequiredErrorIfExist(individualValidation, individualValidationResu
 }
 function getErrors(individualValidation, individualValidationResult) {
     var error = "";
-    if (!individualValidationResult.isRequiredPassed) {
-        error += individualValidation.name + " is required.";
+    if (individualValidationResult.hasOwnProperty("isRequiredPassed") && !individualValidationResult.isRequiredPassed) {
+        if (individualValidation.hasOwnProperty("requiredErrorMessage")) {
+            error += individualValidation.requiredErrorMessage;
+        }
+        else {
+            error += individualValidation.name + " is required.";
+        }
+    }
+    if (individualValidationResult.hasOwnProperty("isRegexPassed") && !individualValidationResult.isRegexPassed && error == "") { // if required has error don't show regex errors'
+        if (individualValidation.hasOwnProperty("regexErrorMessage")) {
+            error += individualValidation.regexErrorMessage;
+        }
+        else {
+            error += individualValidation.name + "is invalid.";
+        }
+    }
+    if (individualValidationResult.hasOwnProperty("isCustomValidationPassed") && !individualValidationResult.isCustomValidationPassed && error == "") {
+        if (individualValidation.hasOwnProperty("customValidationMessage")) {
+            error += individualValidation.customValidationMessage;
+        }
+        else {
+            error += individualValidation.name + "is invalid.";
+        }
     }
     return error;
 }
@@ -115,13 +171,45 @@ function validateRequired(selector) {
         return false;
     }
     else {
-        var value = $(selector).val();
+        var value = getElementValue(selector);
         if (value == '' || value == undefined) {
             return false;
         }
         else {
             return true;
         }
+    }
+}
+
+function validateRegex(selector, property) {
+    if (selector == undefined || selector == '') {
+        return false;
+    }
+    else {
+       
+        var value = getElementValue(selector);
+        var regex;
+        try {
+            regex = new RegExp(property.regex);
+        }
+        catch (e) {
+            consol.error(e);
+            return false;
+        }
+        var regexResult = regex.test(value)
+        return regexResult;
+    }
+}
+function validateCustomValidation(selector, property) {
+    return property.customValidation();
+}
+function getElementValue(selector) {
+    var elementType = $(selector).attr('type');
+    if (elementType == "checkbox") {
+        return $(selector).is('checked');
+    }
+    else if (elementType == "text") {
+        return $(selector).val();
     }
 }
 
