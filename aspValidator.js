@@ -205,12 +205,19 @@ function validateCustomValidation(selector, property) {
     return property.customValidation();
 }
 function getElementValue(selector) {
-    var elementType = $(selector).attr('type');
-    if (elementType == "checkbox") {
-        return $(selector).is('checked');
+
+    if ($(selector).is('input')) {
+
+        var elementType = $(selector).attr('type');
+        if (elementType == "checkbox") {
+            return $(selector).is('checked');
+        }
+        else if (elementType == "text") {
+            return $(selector).val();
+        }
     }
-    else if (elementType == "text") {
-        return $(selector).val();
+    else if ($(selector).is('textarea')) {
+        return $(selector).text();
     }
 }
 
